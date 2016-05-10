@@ -26,6 +26,17 @@ func (b *simpleReader32) Peek32(bits uint) (uint32, error) {
 	return uint32(b.buffer & (mask << shift) >> shift), err
 }
 
+func (b *simpleReader32) Peek64(bits uint) (uint64, error) {
+	err := b.check(bits)
+	if err != nil {
+		return 0, err
+	}
+
+	shift := (64 - bits)
+	var mask uint64 = (1 << (bits + 1)) - 1
+	return b.buffer & (mask << shift) >> shift, err
+}
+
 func (b *simpleReader32) Trash(bits uint) error {
 	err := b.check(bits)
 	if err == io.EOF {
@@ -38,8 +49,30 @@ func (b *simpleReader32) Trash(bits uint) error {
 	return err
 }
 
+func (b *simpleReader32) ReadByte() (byte, error) {
+	val, err := b.Peek32(8)
+	if err == io.EOF {
+		return 0, io.ErrUnexpectedEOF
+	} else if err != nil {
+		return 0, err
+	}
+	err = b.Trash(8)
+	return byte(val), err
+}
+
 func (b *simpleReader32) Read32(bits uint) (uint32, error) {
 	val, err := b.Peek32(bits)
+	if err == io.EOF {
+		return 0, io.ErrUnexpectedEOF
+	} else if err != nil {
+		return 0, err
+	}
+	err = b.Trash(bits)
+	return val, err
+}
+
+func (b *simpleReader32) Read64(bits uint) (uint64, error) {
+	val, err := b.Peek64(bits)
 	if err == io.EOF {
 		return 0, io.ErrUnexpectedEOF
 	} else if err != nil {

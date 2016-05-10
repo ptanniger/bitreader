@@ -1,18 +1,29 @@
-package bitreader_test
+package bitreader
 
 import "testing"
 import "io"
 import "bytes"
-import "github.com/32bitkid/bitreader"
 
 type read32 func(uint) (uint32, error)
 
-func createReader(b ...byte) bitreader.BitReader {
-	return bitreader.NewBitReader(bytes.NewReader(b))
+func createReader(b ...byte) BitReader {
+	return NewBitReader(bytes.NewReader(b))
 }
 
 func check32(t *testing.T, fn read32, len uint, expected uint32) {
 	actual, err := fn(len)
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+	if actual != expected {
+		t.Fatalf("Expected %d, got %d", expected, actual)
+		return
+	}
+}
+
+func checkByte(t *testing.T, br BitReader, expected byte) {
+	actual, err := br.ReadByte()
 	if err != nil {
 		t.Fatal(err)
 		return
@@ -77,6 +88,34 @@ func TestPeekingBools(t *testing.T) {
 			t.Fatal("Unexpected error")
 		}
 	}
+}
+
+func TestReadingSingleBytes(t *testing.T) {
+	data := []byte{0x01, 0x02, 0x03, 0x04}
+	br := createReader(data...)
+	for _, comp := range data {
+		checkByte(t, br, comp)
+	}
+
+	// now test reading a couple single bytes, Trashing,
+	// Reading more single bytes, trashing and reading the final byte.
+	// should look like:
+	// read, read, trash(4), read, read, trash(12) read
+	data = []byte{0x01, 0x02, 0, 0x30, 0x40, 0, 0x05}
+	br = createReader(data...)
+	checkByte(t, br, 1)
+	checkByte(t, br, 2)
+	err := br.Trash(4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkByte(t, br, 3)
+	checkByte(t, br, 4)
+	err = br.Trash(12)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkByte(t, br, 5)
 }
 
 func TestReadingBools(t *testing.T) {
