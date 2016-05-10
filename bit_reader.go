@@ -63,10 +63,30 @@ type Peeker32 interface {
 	Peek32(n uint) (uint32, error)
 }
 
+// Reader64 is the interface that wraps the basic Read64 method.
+//
+// Read64 allows for reading multiple bits, where (1 <= n <= 64) as a uint64
+// from the bit stream. Then advancing the bit stream by n bits.
+//
+// Read64(n) is equivalent to Peek64(n) followed by Trash(n)
+type Reader64 interface {
+	Read64(n uint) (uint64, error)
+}
+
+// Peeker64 is the interface that wraps the basic Peek64 method.
+//
+// Peek64 allows for reading multiple bits, where (1 <= n <= 64) as a uint64
+// from the bit stream; it does not advance
+// the bit stream any bits.
+type Peeker64 interface {
+	Peek64(n uint) (uint64, error)
+}
+
 // BitReader is the interface that groups together the methods required to
 // perform basic bit operations on a bit stream
 type BitReader interface {
 	io.Reader
+	io.ByteReader
 	Reader
 	Peeker
 	Trasher
