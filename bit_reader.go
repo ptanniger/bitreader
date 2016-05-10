@@ -93,6 +93,8 @@ type BitReader interface {
 	Aligner
 	Reader32
 	Peeker32
+	Reader64
+	Peeker64
 }
 
 // NewBitReader returns the default implementation of a BitReader
