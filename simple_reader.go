@@ -4,18 +4,18 @@ import "io"
 
 // NewSimpleBitReader returns a naïve BitReader implementation that has
 // few optimizations.
-func NewSimpleBitReader(r io.Reader) *simpleReader32 {
-	return &simpleReader32{r, make([]byte, 4), 0, 0}
+func NewSimpleBitReader(r io.Reader) *simpleReader {
+	return &simpleReader{r, make([]byte, 4), 0, 0}
 }
 
-type simpleReader32 struct {
+type simpleReader struct {
 	source     io.Reader
 	readBuffer []byte
 	buffer     uint64
 	bitsLeft   uint
 }
 
-func (b *simpleReader32) Peek32(bits uint) (uint32, error) {
+func (b *simpleReader) Peek32(bits uint) (uint32, error) {
 	err := b.check(bits)
 	if err != nil {
 		return 0, err
@@ -26,7 +26,7 @@ func (b *simpleReader32) Peek32(bits uint) (uint32, error) {
 	return uint32(b.buffer & (mask << shift) >> shift), err
 }
 
-func (b *simpleReader32) Peek64(bits uint) (uint64, error) {
+func (b *simpleReader) Peek64(bits uint) (uint64, error) {
 	err := b.check(bits)
 	if err != nil {
 		return 0, err
@@ -37,7 +37,7 @@ func (b *simpleReader32) Peek64(bits uint) (uint64, error) {
 	return b.buffer & (mask << shift) >> shift, err
 }
 
-func (b *simpleReader32) Trash(bits uint) error {
+func (b *simpleReader) Trash(bits uint) error {
 	err := b.check(bits)
 	if err == io.EOF {
 		return io.ErrUnexpectedEOF
@@ -49,7 +49,7 @@ func (b *simpleReader32) Trash(bits uint) error {
 	return err
 }
 
-func (b *simpleReader32) ReadByte() (byte, error) {
+func (b *simpleReader) ReadByte() (byte, error) {
 	val, err := b.Peek32(8)
 	if err == io.EOF {
 		return 0, io.ErrUnexpectedEOF
@@ -60,7 +60,7 @@ func (b *simpleReader32) ReadByte() (byte, error) {
 	return byte(val), err
 }
 
-func (b *simpleReader32) Read32(bits uint) (uint32, error) {
+func (b *simpleReader) Read32(bits uint) (uint32, error) {
 	val, err := b.Peek32(bits)
 	if err == io.EOF {
 		return 0, io.ErrUnexpectedEOF
@@ -71,7 +71,7 @@ func (b *simpleReader32) Read32(bits uint) (uint32, error) {
 	return val, err
 }
 
-func (b *simpleReader32) Read64(bits uint) (uint64, error) {
+func (b *simpleReader) Read64(bits uint) (uint64, error) {
 	val, err := b.Peek64(bits)
 	if err == io.EOF {
 		return 0, io.ErrUnexpectedEOF
@@ -82,12 +82,12 @@ func (b *simpleReader32) Read64(bits uint) (uint64, error) {
 	return val, err
 }
 
-func (b *simpleReader32) PeekBit() (bool, error) {
+func (b *simpleReader) PeekBit() (bool, error) {
 	val, err := b.Peek32(1)
 	return val == 1, err
 }
 
-func (b *simpleReader32) ReadBit() (bool, error) {
+func (b *simpleReader) ReadBit() (bool, error) {
 	val, err := b.PeekBit()
 	if err == io.EOF {
 		return false, io.ErrUnexpectedEOF
@@ -98,14 +98,14 @@ func (b *simpleReader32) ReadBit() (bool, error) {
 	return val, err
 }
 
-func (b *simpleReader32) check(bits uint) error {
+func (b *simpleReader) check(bits uint) error {
 	if b.bitsLeft < bits {
 		return b.fill(bits)
 	}
 	return nil
 }
 
-func (b *simpleReader32) fill(needed uint) error {
+func (b *simpleReader) fill(needed uint) error {
 	neededBytes := int((needed - b.bitsLeft + 7) >> 3)
 	n, err := io.ReadAtLeast(b.source, b.readBuffer, neededBytes)
 
@@ -121,7 +121,7 @@ func (b *simpleReader32) fill(needed uint) error {
 	return err
 }
 
-func (b *simpleReader32) Read(p []byte) (n int, err error) {
+func (b *simpleReader) Read(p []byte) (n int, err error) {
 	b.ByteAlign()
 	bytes := int((b.bitsLeft + 7) >> 3)
 	for i := 0; i < bytes; i++ {
@@ -136,11 +136,11 @@ func (b *simpleReader32) Read(p []byte) (n int, err error) {
 	return
 }
 
-func (b *simpleReader32) ByteAlign() (uint, error) {
+func (b *simpleReader) ByteAlign() (uint, error) {
 	n := b.bitsLeft % 8
 	return n, b.Trash(n)
 }
 
-func (b *simpleReader32) IsByteAligned() bool {
+func (b *simpleReader) IsByteAligned() bool {
 	return b.bitsLeft%8 == 0
 }
